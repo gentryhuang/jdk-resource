@@ -67,10 +67,16 @@ import java.util.*;
  * @author Doug Lea
  * @param <E> the type of elements held in this collection
  */
+
 public class DelayQueue<E extends Delayed> extends AbstractQueue<E>
     implements BlockingQueue<E> {
-
+    /**
+     * 可重入锁
+     */
     private final transient ReentrantLock lock = new ReentrantLock();
+    /**
+     * 优先队列
+     */
     private final PriorityQueue<E> q = new PriorityQueue<E>();
 
     /**
@@ -89,12 +95,19 @@ public class DelayQueue<E extends Delayed> extends AbstractQueue<E>
      * signalled.  So waiting threads must be prepared to acquire
      * and lose leadership while waiting.
      */
+
+    /**
+     * 等待队列头部元素的线程
+     */
     private Thread leader = null;
 
     /**
      * Condition signalled when a newer element becomes available
      * at the head of the queue or a new thread may need to
      * become leader.
+     */
+    /**
+     * 锁的条件，可以有选择的唤醒线程
      */
     private final Condition available = lock.newCondition();
 
@@ -134,16 +147,21 @@ public class DelayQueue<E extends Delayed> extends AbstractQueue<E>
      * @throws NullPointerException if the specified element is null
      */
     public boolean offer(E e) {
+        // 添加元素的时候加锁
         final ReentrantLock lock = this.lock;
         lock.lock();
         try {
+            // 使用优先级队列加入数据
             q.offer(e);
+            // 如果确保优先级队列中加入的正是刚才拿到锁的线程执行的参入数据，那么等待队列头部元素的线程就置空，并且唤醒该锁阻塞的线程
             if (q.peek() == e) {
                 leader = null;
                 available.signal();
             }
+            // 添加成功
             return true;
         } finally {
+            // 释放锁
             lock.unlock();
         }
     }
